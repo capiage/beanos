@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Intensity Interference Task</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #111;
+            font-family: 'Arial Black', Gadget, sans-serif;
+            transition: background-color 0.15s ease-in-out;
+            overflow: hidden;
+            color: white;
+            user-select: none;
+            position: relative;
+        }
+        @keyframes crazy-drift {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(var(--mx), var(--my)) scale(var(--ms)); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        #word-display {
+            font-size: 7.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-shadow: 4px 4px 15px rgba(0,0,0,0.95);
+            letter-spacing: 2px;
+            text-align: center;
+            margin: 20px;
+            position: relative;
+            z-index: 10;
+            animation: crazy-drift 3s infinite ease-in-out;
+        }
+        .distractor {
+            position: absolute;
+            font-weight: 900;
+            text-transform: uppercase;
+            opacity: 0.85;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.9);
+            pointer-events: none;
+            z-index: 1;
+            animation: crazy-drift var(--speed) infinite ease-in-out;
+        }
+        #progress-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background-color: rgba(255, 255, 255, 0.15);
+            z-index: 20;
+        }
+        #progress-bar {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+        }
+        #start-btn {
+            padding: 20px 40px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            background-color: #ff003c;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 0, 60, 0.4);
+            transition: transform 0.2s;
+            font-family: Arial, sans-serif;
+            z-index: 30;
+        }
+        #start-btn:hover {
+            transform: scale(1.05);
+        }
+        #status-hud {
+            position: absolute;
+            bottom: 40px;
+            font-size: 1.5rem;
+            color: white;
+            background: rgba(0,0,0,0.85);
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-family: Arial, sans-serif;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="progress-container" style="display: none;">
+        <div id="progress-bar"></div>
+    </div>
+
+    <button id="start-btn" onclick="startTest()">START COGNITIVE OVERLOAD ASSESSMENT</button>
+    <div id="word-display" style="display: none;">GET READY...</div>
+    <div id="status-hud" style="display: none;">Word: 1 / 12</div>
+
+    <script>
+        // 12 High-intensity stimuli (Target colors are restricted to red, blue, yellow, green)
+        const stimuli = [
+            { word: "BLUE", targetColor: "yellow", type: "color" },
+            { word: "ALGORITHM", targetColor: "green", type: "tech" },
+            { word: "RED", targetColor: "blue", type: "color" },
+            { word: "DOPAMINE", targetColor: "red", type: "tech" },
+            { word: "GREEN", targetColor: "yellow", type: "color" },
+            { word: "SCROLL", targetColor: "blue", type: "tech" },
+            { word: "YELLOW", targetColor: "green", type: "color" },
+            { word: "NOTIFICATION", targetColor: "red", type: "tech" },
+            { word: "BLUE", targetColor: "green", type: "color" },
+            { word: "AI", targetColor: "yellow", type: "tech" },
+            { word: "RED", targetColor: "blue", type: "color" },
+            { word: "FEED", targetColor: "red", type: "tech" }
+        ];
+
+        const bgColors = ["red", "blue", "yellow", "green"];
+        let currentIndex = 0;
+        let mainTimer;
+        let flashTimer;
+        let delayTimer;
+
+        const startBtn = document.getElementById('start-btn');
+        const wordDisplay = document.getElementById('word-display');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const statusHud = document.getElementById('status-hud');
+
+        function startTest() {
+            startBtn.style.display = 'none';
+            wordDisplay.style.display = 'block';
+            progressContainer.style.display = 'block';
+            statusHud.style.display = 'block';
+            runStep();
+        }
+
+        function runStep() {
+            // Reset state
+            clearTimeout(mainTimer);
+            clearTimeout(delayTimer);
+            clearInterval(flashTimer);
+            document.querySelectorAll('.distractor').forEach(el => el.remove());
+
+            if (currentIndex < stimuli.length) {
+                const current = stimuli[currentIndex];
+                wordDisplay.innerText = current.word;
+                
+                // Set original baseline (the color they must remember)
+                wordDisplay.style.color = current.targetColor;
+                document.body.style.backgroundColor = "#111"; // start dark for contrast
+
+                // Randomize main text scale/drift properties
+                wordDisplay.style.setProperty('--mx', `${(Math.random() - 0.5) * 120}px`);
+                wordDisplay.style.setProperty('--my', `${(Math.random() - 0.5) * 120}px`);
+                wordDisplay.style.setProperty('--ms', `${Math.random() * 0.4 + 1.1}`);
+
+                statusHud.innerText = `Word: ${currentIndex + 1} / ${stimuli.length} (${current.type.toUpperCase()})`;
+
+                // Calculate durations based on progressive index (speeds up as index climbs)
+                let wordDuration = Math.max(1200, 3000 - (currentIndex * 180)); // 3.0s down to 1.2s
+                let flashRate = Math.max(150, 600 - (currentIndex * 50));       // 600ms down to 150ms
+
+                // Sync progress bar
+                progressBar.style.transition = 'none';
+                progressBar.style.width = '100%';
+                progressBar.offsetHeight; // trigger reflow
+                progressBar.style.transition = `width ${wordDuration}ms linear`;
+                progressBar.style.width = '0%';
+
+                // Introduce chaos after 450ms delay (allowing working memory snapshot of target color)
+                delayTimer = setTimeout(() => {
+                    spawnDistractors(current.word, current.targetColor);
+
+                    let colorStep = 0;
+                    flashTimer = setInterval(() => {
+                        // Flash background color (restricted to red, blue, yellow, green)
+                        let bg = bgColors[colorStep % bgColors.length];
+                        
+                        // Flash font color (strictly restricted to clashing colors)
+                        let textChoices = bgColors.filter(c => c !== bg);
+                        let txt = textChoices[Math.floor(Math.random() * textChoices.length)];
+
+                        document.body.style.backgroundColor = bg;
+                        wordDisplay.style.color = txt;
+
+                        colorStep++;
+                    }, flashRate);
+
+                }, 450);
+
+                // Queue next slide transition
+                mainTimer = setTimeout(() => {
+                    currentIndex++;
+                    runStep();
+                }, wordDuration);
+
+            } else {
+                // Test ends
+                wordDisplay.innerText = "TEST COMPLETE";
+                wordDisplay.style.color = "white";
+                document.body.style.backgroundColor = "#111";
+                progressContainer.style.display = 'none';
+                statusHud.style.display = 'none';
+            }
+        }
+
+        function spawnDistractors(word, targetColor) {
+            const allowedColors = bgColors.filter(c => c !== targetColor);
+            
+            for (let i = 0; i < 24; i++) {
+                const dist = document.createElement('div');
+                dist.classList.add('distractor');
+                dist.innerText = word;
+                
+                // Randomly disperse distractors across screen
+                dist.style.left = `${Math.random() * 80 + 10}%`;
+                dist.style.top = `${Math.random() * 80 + 10}%`;
+                dist.style.fontSize = `${Math.random() * 3.5 + 1.5}rem`;
+                dist.style.color = allowedColors[Math.floor(Math.random() * allowedColors.length)];
+                
+                // Set animation variables for individualized scaling/drifting
+                dist.style.setProperty('--mx', `${(Math.random() - 0.5) * 350}px`);
+                dist.style.setProperty('--my', `${(Math.random() - 0.5) * 350}px`);
+                dist.style.setProperty('--ms', `${Math.random() * 1.6 + 0.4}`);
+                dist.style.setProperty('--speed', `${Math.random() * 2 + 1}s`);
+
+                document.body.appendChild(dist);
+            }
+        }
+    </script>
+</body>
+</html>
